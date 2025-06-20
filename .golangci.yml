@@ -1,0 +1,87 @@
+linters:
+  enable:
+    - gofmt
+    - govet
+    - errcheck
+    - ineffassign
+    - misspell
+    - staticcheck
+    - unused
+    - gosimple
+    - typecheck
+    - goimports
+    - nakedret
+    - unparam
+    - gosec
+    - dupl
+    - gocyclo
+    - gocognit
+    - prealloc
+    - exportloopref
+    - whitespace
+    - unconvert
+    - asciicheck
+    - makezero
+    - durationcheck
+    - errorlint
+    - forcetypeassert
+    - nilerr
+    - predeclared
+    - tparallel
+    - thelper
+    - wastedassign
+    - revive
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  gofmt:
+    simplify: true
+  golint:
+    min-confidence: 0.8
+  govet:
+    check-shadowing: true
+  misspell:
+    locale: US
+  unused:
+    check-exported: false
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  gosec:
+    includes:
+      - G401
+      - G306
+      - G401
+  nakedret:
+    max-func-lines: 30
+
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - integration
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - gocyclo
+    - linters:
+        - gosec
+      text: "G104:"
+    - linters:
+        - errcheck
+      text: "Error return value of `image.Close` is not checked"
+    - linters:
+        - errcheck
+      text: "Error return value of `.*\\.Close` is not checked"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
