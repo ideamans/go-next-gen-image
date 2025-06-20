@@ -35,9 +35,29 @@ jobs:
 
       - name: Install libvips (Windows)
         if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          choco install vips -y
-          echo "C:\tools\vips\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Download vips Windows binary
+          $vipsVersion = "8.15.1"
+          $vipsUrl = "https://github.com/libvips/libvips/releases/download/v${vipsVersion}/vips-dev-w64-all-${vipsVersion}.zip"
+          $vipsZip = "vips.zip"
+          $vipsDir = "C:\vips"
+          
+          Write-Host "Downloading vips from $vipsUrl"
+          Invoke-WebRequest -Uri $vipsUrl -OutFile $vipsZip
+          
+          Write-Host "Extracting vips to $vipsDir"
+          Expand-Archive -Path $vipsZip -DestinationPath $vipsDir -Force
+          
+          # Find the actual vips directory (it's usually nested)
+          $vipsBin = Get-ChildItem -Path $vipsDir -Filter "bin" -Recurse -Directory | Select-Object -First 1
+          
+          Write-Host "Adding to PATH: $($vipsBin.FullName)"
+          echo "$($vipsBin.FullName)" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          
+          # Set PKG_CONFIG_PATH
+          $vipsPkgConfig = Get-ChildItem -Path $vipsDir -Filter "pkgconfig" -Recurse -Directory | Select-Object -First 1
+          echo "PKG_CONFIG_PATH=$($vipsPkgConfig.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Download dependencies
         run: go mod download
@@ -46,7 +66,6 @@ jobs:
         run: go test -v ./...
         env:
           CGO_ENABLED: 1
-          PKG_CONFIG_PATH: ${{ matrix.os == 'windows-latest' && 'C:\tools\vips\lib\pkgconfig' || '' }}
 
   lint:
     runs-on: ubuntu-latest

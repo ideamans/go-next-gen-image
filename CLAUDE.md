@@ -2,6 +2,13 @@
 
 golang で従来の Web フォーマット JPEG・PNG・GIF を、次世代画像フォーマット WebP と AVIF にベストプラクティスに従い変換するためのライブラリです。
 
+## Windows CI の注意事項
+
+Windows環境でのCIではChocolateyにvipsパッケージが存在しないため、代替手段を使用する必要があります：
+1. vcpkgを使用してlibvipsをインストール
+2. または、公式のWindowsバイナリを直接ダウンロード
+3. または、Windowsテストをスキップ
+
 # 仕様ライブラリ
 
 - libvips
