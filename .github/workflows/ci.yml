@@ -31,7 +31,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips-dev
+          sudo apt-get install -y libvips-dev libheif-dev
 
       - name: Install libvips (macOS)
         if: matrix.os == 'macos-latest'
@@ -90,7 +90,7 @@ jobs:
       - name: Install libvips
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips-dev
+          sudo apt-get install -y libvips-dev libheif-dev
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -112,7 +112,7 @@ jobs:
       - name: Install libvips
         run: |
           sudo apt-get update
-          sudo apt-get install -y libvips-dev
+          sudo apt-get install -y libvips-dev libheif-dev
 
       - name: Download dependencies
         run: go mod download
