@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Go
+        if: matrix.os != 'windows-latest'
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
@@ -33,39 +34,44 @@ jobs:
         run: |
           brew install vips
 
-      - name: Install libvips (Windows)
+      - name: Setup MSYS2 (Windows)
         if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          # Download vips Windows binary
-          $vipsVersion = "8.15.1"
-          $vipsUrl = "https://github.com/libvips/libvips/releases/download/v${vipsVersion}/vips-dev-w64-all-${vipsVersion}.zip"
-          $vipsZip = "vips.zip"
-          $vipsDir = "C:\vips"
-          
-          Write-Host "Downloading vips from $vipsUrl"
-          Invoke-WebRequest -Uri $vipsUrl -OutFile $vipsZip
-          
-          Write-Host "Extracting vips to $vipsDir"
-          Expand-Archive -Path $vipsZip -DestinationPath $vipsDir -Force
-          
-          # Find the actual vips directory (it's usually nested)
-          $vipsBin = Get-ChildItem -Path $vipsDir -Filter "bin" -Recurse -Directory | Select-Object -First 1
-          
-          Write-Host "Adding to PATH: $($vipsBin.FullName)"
-          echo "$($vipsBin.FullName)" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          
-          # Set PKG_CONFIG_PATH
-          $vipsPkgConfig = Get-ChildItem -Path $vipsDir -Filter "pkgconfig" -Recurse -Directory | Select-Object -First 1
-          echo "PKG_CONFIG_PATH=$($vipsPkgConfig.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-vips
+            mingw-w64-x86_64-go
 
-      - name: Download dependencies
+      - name: Download dependencies (Unix)
+        if: matrix.os != 'windows-latest'
         run: go mod download
 
-      - name: Run tests
+      - name: Download dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          go mod download
+
+      - name: Run tests (Unix)
+        if: matrix.os != 'windows-latest'
         run: go test -v ./...
         env:
           CGO_ENABLED: 1
+
+      - name: Run tests (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          go test -v ./...
+        env:
+          CGO_ENABLED: 1
+          MSYSTEM: MINGW64
 
   lint:
     runs-on: ubuntu-latest

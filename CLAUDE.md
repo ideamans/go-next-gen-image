@@ -4,10 +4,11 @@ golang で従来の Web フォーマット JPEG・PNG・GIF を、次世代画�
 
 ## Windows CI の注意事項
 
-Windows環境でのCIではChocolateyにvipsパッケージが存在しないため、代替手段を使用する必要があります：
-1. vcpkgを使用してlibvipsをインストール
-2. または、公式のWindowsバイナリを直接ダウンロード
-3. または、Windowsテストをスキップ
+Windows環境でのCIではMSYS2を使用してlibvipsとGoをインストールしています：
+- MSYS2のMINGW64環境を使用
+- mingw-w64-x86_64-vips パッケージでlibvipsをインストール
+- mingw-w64-x86_64-go パッケージでGoをインストール
+- テスト実行時はmsys2シェルを使用
 
 # 仕様ライブラリ
 
