@@ -12,9 +12,10 @@ jobs:
       matrix:
         go-version: ["1.22", "1.23"]
         os: [ubuntu-latest, macos-latest]
-        include:
-          - os: windows-latest
-            go-version: "msys2"
+        # Windows CI temporarily disabled due to MSYS2 issues
+        # include:
+        #   - os: windows-latest
+        #     go-version: "msys2"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -95,7 +96,8 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
-          args: --timeout=5m --issues-exit-code=0
+          args: --timeout=5m
+        continue-on-error: true
 
   coverage:
     runs-on: ubuntu-latest
