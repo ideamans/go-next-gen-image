@@ -34,7 +34,7 @@ jobs:
           # Install AVIF codec (libaom) for libheif
           sudo apt-get install -y libaom-dev libaom3
           # Install libheif and libvips
-          sudo apt-get install -y libheif-dev libvips-dev
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev
           # Verify HEIF/AVIF support
           vips --vips-config | grep -i heif || echo "Warning: HEIF support not detected"
 
