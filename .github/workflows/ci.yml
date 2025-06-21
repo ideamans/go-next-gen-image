@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         go-version: ["1.22", "1.23"]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-22.04, macos-latest]
         # Windows CI temporarily disabled due to MSYS2 issues
         # include:
         #   - os: windows-latest
