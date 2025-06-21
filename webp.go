@@ -29,13 +29,6 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to auto-rotate: %w", NewFormatError(err))
 	}
 
-	// Remove metadata except ICC profile and orientation
-	// RemoveMetadata() keeps ICC profile, orientation, and page info by default
-	err = image.RemoveMetadata()
-	if err != nil {
-		return fmt.Errorf("failed to remove metadata: %w", err)
-	}
-
 	// Detect input format using magic bytes
 	imgType, err := DetectImageType(inputPath)
 	if err != nil {
@@ -55,7 +48,7 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 		params = vips.NewWebpExportParams()
 		params.Quality = c.config.JPEGToWebP.Quality
 		params.Lossless = false
-		params.StripMetadata = false // Already removed unwanted metadata, keep ICC
+		params.StripMetadata = true // Strip all metadata during export
 
 		outputBuffer, _, err = image.ExportWebp(params)
 		if err != nil {
@@ -66,7 +59,7 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 		// PNG to WebP: lossless conversion
 		params = vips.NewWebpExportParams()
 		params.Lossless = true
-		params.StripMetadata = false // Already removed unwanted metadata, keep ICC
+		params.StripMetadata = true // Strip all metadata during export
 
 		outputBuffer, _, err = image.ExportWebp(params)
 		if err != nil {
@@ -79,7 +72,7 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 			nearLosslessParams.Lossless = false
 			nearLosslessParams.NearLossless = true
 			nearLosslessParams.Quality = 100
-			nearLosslessParams.StripMetadata = false
+			nearLosslessParams.StripMetadata = true // Strip all metadata during export
 
 			nearLosslessBuffer, _, err2 := image.ExportWebp(nearLosslessParams)
 			if err2 == nil && len(nearLosslessBuffer) < len(outputBuffer) {
@@ -102,7 +95,7 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 		// Export as animated WebP
 		params = vips.NewWebpExportParams()
 		params.Lossless = true // GIF frames are lossless
-		params.StripMetadata = false
+		params.StripMetadata = true // Strip all metadata during export
 
 		// Get page height for animation
 		pageHeight := animImage.PageHeight()

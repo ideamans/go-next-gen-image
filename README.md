@@ -100,12 +100,12 @@ converter := nextgenimage.NewConverter(config)
 - Lossy compression
 - Configurable quality (default: 80)
 - Auto-rotation based on EXIF orientation
-- Removes EXIF and XMP metadata, preserves only ICC profile
+- Removes all metadata (EXIF, XMP, ICC)
 
 ### PNG to WebP
 - Lossless compression by default
 - Optional near-lossless mode for better compression
-- Removes EXIF and XMP metadata, preserves only ICC profile
+- Removes all metadata (EXIF, XMP, ICC)
 - Alpha channel support
 
 ### GIF to WebP
@@ -117,11 +117,11 @@ converter := nextgenimage.NewConverter(config)
 - Lossy compression with CQ (Constant Quality) mode
 - Configurable CQ value (default: 25, lower = better quality)
 - Auto-rotation based on EXIF orientation
-- Removes EXIF and XMP metadata, preserves only ICC profile
+- Removes all metadata (EXIF, XMP, ICC)
 
 ### PNG to AVIF
 - Lossless compression
-- Removes EXIF and XMP metadata, preserves only ICC profile
+- Removes all metadata (EXIF, XMP, ICC)
 - Alpha channel support
 
 ### GIF to AVIF

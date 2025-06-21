@@ -42,14 +42,14 @@ if err != nil {
 - lossy 変換
 - Config の JPEGToWebP.Quality で品質を指定可能(デフォルト 80)
 - EXIF でオリエンテーションが指定されている場合は先にデータを回転
-- EXIF と XMP メタデータを削除し、ICC プロファイルのみ維持
+- 全てのメタデータを削除（EXIF、XMP、ICC）
 
 ## PNG to WebP
 
 - lossless 変換
 - Config の PNGToWebP で TryNearLossless を指定可能(デフォルト false)
   - true の場合、NearLossless 変換も試し、サイズの小さい方を採用
-- EXIF と XMP メタデータを削除し、ICC プロファイルのみ維持
+- 全てのメタデータを削除（EXIF、XMP、ICC）
 
 ## GIF to WebP
 
@@ -61,12 +61,12 @@ if err != nil {
 - lossy 変換
 - Config の JPEGToAVIF.CQ で CQ を指定可能(デフォルト 25)
 - EXIF でオリエンテーションが指定されている場合は先にデータを回転
-- EXIF と XMP メタデータを削除し、ICC プロファイルのみ維持
+- 全てのメタデータを削除（EXIF、XMP、ICC）
 
 ## PNG to AVIF
 
 - lossless 変換
-- EXIF と XMP メタデータを削除し、ICC プロファイルのみ維持
+- 全てのメタデータを削除（EXIF、XMP、ICC）
 
 # テスト
 

@@ -81,6 +81,25 @@ func TestPNGToAVIF(t *testing.T) {
 			// For PNG lossless conversion to AVIF, skip PSNR check
 			// AVIF lossless may not produce identical pixels due to format differences
 			t.Logf("Lossless AVIF conversion completed")
+
+			// Check metadata preservation/removal
+			origEXIF, origXMP, origICC := checkMetadata(t, inputPath)
+			convEXIF, convXMP, convICC := checkMetadata(t, outputPath)
+			
+			t.Logf("Original metadata - EXIF: %v, XMP: %v, ICC: %v", origEXIF, origXMP, origICC)
+			t.Logf("Converted metadata - EXIF: %v, XMP: %v, ICC: %v", convEXIF, convXMP, convICC)
+			
+			// All metadata should be removed with StripMetadata=true
+			if convEXIF {
+				t.Error("EXIF data was not removed during conversion")
+			}
+			if convXMP {
+				t.Error("XMP data was not removed during conversion")
+			}
+			// ICC is also removed with StripMetadata=true
+			if convICC {
+				t.Error("ICC profile was not removed during conversion")
+			}
 		})
 	}
 }
