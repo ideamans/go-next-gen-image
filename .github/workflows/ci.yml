@@ -98,7 +98,7 @@ jobs:
           # Install AVIF codec (libaom) for libheif
           sudo apt-get install -y libaom-dev libaom3
           # Install libheif and libvips
-          sudo apt-get install -y libheif-dev libvips-dev
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
