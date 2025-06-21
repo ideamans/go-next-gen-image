@@ -43,8 +43,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           # Download pre-built vips binaries
-          $vipsVersion = "8.15.0"
-          $vipsUrl = "https://github.com/libvips/libvips/releases/download/v${vipsVersion}/vips-dev-w64-all-${vipsVersion}.zip"
+          $vipsVersion = "8.15.1"
+          $vipsUrl = "https://github.com/libvips/build-win64-mxe/releases/download/v${vipsVersion}/vips-dev-w64-all-${vipsVersion}.zip"
           
           Write-Host "Downloading vips from $vipsUrl"
           Invoke-WebRequest -Uri $vipsUrl -OutFile vips.zip
@@ -52,11 +52,14 @@ jobs:
           Write-Host "Extracting vips..."
           Expand-Archive -Path vips.zip -DestinationPath C:\vips -Force
           
+          Write-Host "Setting up environment variables..."
+          $vipsPath = "C:\vips\vips-dev-8.15"
+          
           # Set environment variables
-          echo "CGO_CFLAGS=-IC:\vips\vips-dev-8.15\include\glib-2.0 -IC:\vips\vips-dev-8.15\lib\glib-2.0\include -IC:\vips\vips-dev-8.15\include" >> $env:GITHUB_ENV
-          echo "CGO_LDFLAGS=-LC:\vips\vips-dev-8.15\lib -lvips -lgobject-2.0 -lglib-2.0" >> $env:GITHUB_ENV
-          echo "PATH=C:\vips\vips-dev-8.15\bin;$env:PATH" >> $env:GITHUB_ENV
-          echo "PKG_CONFIG_PATH=C:\vips\vips-dev-8.15\lib\pkgconfig" >> $env:GITHUB_ENV
+          echo "CGO_CFLAGS=-I${vipsPath}\include\glib-2.0 -I${vipsPath}\lib\glib-2.0\include -I${vipsPath}\include" >> $env:GITHUB_ENV
+          echo "CGO_LDFLAGS=-L${vipsPath}\lib -lvips -lgobject-2.0 -lglib-2.0" >> $env:GITHUB_ENV
+          echo "PATH=${vipsPath}\bin;$env:PATH" >> $env:GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${vipsPath}\lib\pkgconfig" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Download dependencies
