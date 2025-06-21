@@ -34,9 +34,10 @@ jobs:
           # Install AVIF codec (libaom) for libheif
           sudo apt-get install -y libaom-dev libaom3
           # Install libheif and libvips
-          sudo apt-get install -y libheif-dev libvips-dev libavif-dev
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev libvips-tools
           # Verify HEIF/AVIF support
-          vips --vips-config | grep -i heif || echo "Warning: HEIF support not detected"
+          # vips --vips-config | grep -i heif || echo "Warning: HEIF support not detected"
+          vips --vips-config
 
       - name: Install libvips (macOS)
         if: matrix.os == 'macos-latest'
@@ -98,7 +99,7 @@ jobs:
           # Install AVIF codec (libaom) for libheif
           sudo apt-get install -y libaom-dev libaom3
           # Install libheif and libvips
-          sudo apt-get install -y libheif-dev libvips-dev libavif-dev
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev libvips-tools
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -123,7 +124,8 @@ jobs:
           # Install AVIF codec (libaom) for libheif
           sudo apt-get install -y libaom-dev libaom3
           # Install libheif and libvips
-          sudo apt-get install -y libheif-dev libvips-dev
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev libvips-tools
+          vips --vips-config
 
       - name: Download dependencies
         run: go mod download
