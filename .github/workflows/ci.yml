@@ -28,7 +28,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Install libvips (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
           # Install AVIF codec (libaom) for libheif
