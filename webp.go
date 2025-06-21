@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/davidbyttow/govips/v2/vips"
 )
@@ -30,13 +29,21 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to auto-rotate: %w", NewFormatError(err))
 	}
 
-	// Detect input format
-	ext := strings.ToLower(filepath.Ext(inputPath))
+	// Detect input format using magic bytes
+	imgType, err := DetectImageType(inputPath)
+	if err != nil {
+		return fmt.Errorf("failed to detect image type: %w", err)
+	}
+
+	if !imgType.IsSupported() {
+		return fmt.Errorf("unsupported image format: %s", imgType)
+	}
+
 	var params *vips.WebpExportParams
 	var outputBuffer []byte
 
-	switch ext {
-	case ".jpg", ".jpeg":
+	switch imgType {
+	case ImageTypeJPEG:
 		// JPEG to WebP: lossy conversion
 		params = vips.NewWebpExportParams()
 		params.Quality = c.config.JPEGToWebP.Quality
@@ -48,7 +55,7 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 			return fmt.Errorf("failed to export webp: %w", NewFormatError(err))
 		}
 
-	case ".png":
+	case ImageTypePNG:
 		// PNG to WebP: lossless conversion
 		params = vips.NewWebpExportParams()
 		params.Lossless = true
@@ -73,7 +80,7 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 			}
 		}
 
-	case ".gif":
+	case ImageTypeGIF:
 		// GIF to WebP: animated webp conversion
 		// Load as animated image
 		animParams := vips.NewImportParams()
@@ -102,8 +109,6 @@ func (c *Converter) ToWebP(inputPath, outputPath string) error {
 			return fmt.Errorf("failed to export animated webp: %w", NewFormatError(err))
 		}
 
-	default:
-		return fmt.Errorf("unsupported input format: %s", ext)
 	}
 
 	// Check if output is smaller than input

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/davidbyttow/govips/v2/vips"
 )
@@ -30,13 +29,26 @@ func (c *Converter) ToAVIF(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to auto-rotate: %w", NewFormatError(err))
 	}
 
-	// Detect input format
-	ext := strings.ToLower(filepath.Ext(inputPath))
+	// Detect input format using magic bytes
+	imgType, err := DetectImageType(inputPath)
+	if err != nil {
+		return fmt.Errorf("failed to detect image type: %w", err)
+	}
+
+	if !imgType.IsSupported() {
+		return fmt.Errorf("unsupported image format: %s", imgType)
+	}
+
+	// GIF to AVIF is not supported
+	if imgType == ImageTypeGIF {
+		return NewFormatError(fmt.Errorf("GIF to AVIF conversion is not supported"))
+	}
+
 	var params *vips.AvifExportParams
 	var outputBuffer []byte
 
-	switch ext {
-	case ".jpg", ".jpeg":
+	switch imgType {
+	case ImageTypeJPEG:
 		// JPEG to AVIF: lossy conversion with CQ
 		params = vips.NewAvifExportParams()
 		params.Quality = c.config.JPEGToAVIF.CQ
@@ -48,7 +60,7 @@ func (c *Converter) ToAVIF(inputPath, outputPath string) error {
 			return fmt.Errorf("failed to export avif: %w", NewFormatError(err))
 		}
 
-	case ".png":
+	case ImageTypePNG:
 		// PNG to AVIF: lossless conversion
 		params = vips.NewAvifExportParams()
 		params.Lossless = true
@@ -59,12 +71,6 @@ func (c *Converter) ToAVIF(inputPath, outputPath string) error {
 			return fmt.Errorf("failed to export avif: %w", NewFormatError(err))
 		}
 
-	case ".gif":
-		// GIF to AVIF: not directly supported, would need ffmpeg
-		return NewFormatError(fmt.Errorf("GIF to AVIF conversion is not supported by this library"))
-
-	default:
-		return fmt.Errorf("unsupported input format: %s", ext)
 	}
 
 	// Check if output is smaller than input
