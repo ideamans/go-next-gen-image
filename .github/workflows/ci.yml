@@ -42,9 +42,12 @@ jobs:
       - name: Install libvips (Windows)
         if: matrix.os == 'windows-latest'
         run: |
+          # Install pkg-config first
+          choco install pkgconfiglite -y
+          
           # Download pre-built vips binaries
           $vipsVersion = "8.15.1"
-          $vipsUrl = "https://github.com/libvips/build-win64-mxe/releases/download/v${vipsVersion}/vips-dev-w64-all-${vipsVersion}.zip"
+          $vipsUrl = "https://github.com/libvips/build-win64-mxe/releases/download/v${vipsVersion}/vips-dev-w64-web-${vipsVersion}.zip"
           
           Write-Host "Downloading vips from $vipsUrl"
           Invoke-WebRequest -Uri $vipsUrl -OutFile vips.zip
@@ -55,11 +58,13 @@ jobs:
           Write-Host "Setting up environment variables..."
           $vipsPath = "C:\vips\vips-dev-8.15"
           
-          # Set environment variables
-          echo "CGO_CFLAGS=-I${vipsPath}\include\glib-2.0 -I${vipsPath}\lib\glib-2.0\include -I${vipsPath}\include" >> $env:GITHUB_ENV
-          echo "CGO_LDFLAGS=-L${vipsPath}\lib -lvips -lgobject-2.0 -lglib-2.0" >> $env:GITHUB_ENV
-          echo "PATH=${vipsPath}\bin;$env:PATH" >> $env:GITHUB_ENV
+          # Set PATH and PKG_CONFIG_PATH
+          echo "PATH=${vipsPath}\bin;C:\ProgramData\chocolatey\bin;$env:PATH" >> $env:GITHUB_ENV
           echo "PKG_CONFIG_PATH=${vipsPath}\lib\pkgconfig" >> $env:GITHUB_ENV
+          
+          # Let pkg-config handle the flags
+          Write-Host "Testing pkg-config..."
+          & "C:\ProgramData\chocolatey\bin\pkg-config.exe" --version
         shell: pwsh
 
       - name: Download dependencies
