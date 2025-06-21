@@ -39,39 +39,42 @@ jobs:
         run: |
           brew install vips
 
-      - name: Install libvips (Windows)
+      - name: Setup MSYS2
         if: matrix.os == 'windows-latest'
-        run: |
-          # Install pkg-config first
-          choco install pkgconfiglite -y
-          
-          # Download pre-built vips binaries
-          $vipsVersion = "8.15.1"
-          $vipsUrl = "https://github.com/libvips/build-win64-mxe/releases/download/v${vipsVersion}/vips-dev-w64-web-${vipsVersion}.zip"
-          
-          Write-Host "Downloading vips from $vipsUrl"
-          Invoke-WebRequest -Uri $vipsUrl -OutFile vips.zip
-          
-          Write-Host "Extracting vips..."
-          Expand-Archive -Path vips.zip -DestinationPath C:\vips -Force
-          
-          Write-Host "Setting up environment variables..."
-          $vipsPath = "C:\vips\vips-dev-8.15"
-          
-          # Set PATH and PKG_CONFIG_PATH
-          echo "PATH=${vipsPath}\bin;C:\ProgramData\chocolatey\bin;$env:PATH" >> $env:GITHUB_ENV
-          echo "PKG_CONFIG_PATH=${vipsPath}\lib\pkgconfig" >> $env:GITHUB_ENV
-          
-          # Let pkg-config handle the flags
-          Write-Host "Testing pkg-config..."
-          & "C:\ProgramData\chocolatey\bin\pkg-config.exe" --version
-        shell: pwsh
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-libvips
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
 
-      - name: Download dependencies
+      - name: Download dependencies (non-Windows)
+        if: matrix.os != 'windows-latest'
         run: go mod download
 
-      - name: Run tests
+      - name: Download dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          go mod download
+
+      - name: Run tests (non-Windows)
+        if: matrix.os != 'windows-latest'
         run: go test -v ./...
+        env:
+          CGO_ENABLED: 1
+
+      - name: Run tests (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          go test -v ./...
         env:
           CGO_ENABLED: 1
 
