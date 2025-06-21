@@ -11,18 +11,13 @@ jobs:
     strategy:
       matrix:
         go-version: ["1.22", "1.23"]
-        os: [ubuntu-22.04, macos-latest]
-        # Windows CI temporarily disabled due to MSYS2 issues
-        # include:
-        #   - os: windows-latest
-        #     go-version: "msys2"
+        os: [ubuntu-22.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
-        if: matrix.os != 'windows-latest'
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
@@ -44,44 +39,33 @@ jobs:
         run: |
           brew install vips
 
-      - name: Setup MSYS2 (Windows)
+      - name: Install libvips (Windows)
         if: matrix.os == 'windows-latest'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-vips
-            mingw-w64-x86_64-go
+        run: |
+          # Download pre-built vips binaries
+          $vipsVersion = "8.15.0"
+          $vipsUrl = "https://github.com/libvips/libvips/releases/download/v${vipsVersion}/vips-dev-w64-all-${vipsVersion}.zip"
+          
+          Write-Host "Downloading vips from $vipsUrl"
+          Invoke-WebRequest -Uri $vipsUrl -OutFile vips.zip
+          
+          Write-Host "Extracting vips..."
+          Expand-Archive -Path vips.zip -DestinationPath C:\vips -Force
+          
+          # Set environment variables
+          echo "CGO_CFLAGS=-IC:\vips\vips-dev-8.15\include\glib-2.0 -IC:\vips\vips-dev-8.15\lib\glib-2.0\include -IC:\vips\vips-dev-8.15\include" >> $env:GITHUB_ENV
+          echo "CGO_LDFLAGS=-LC:\vips\vips-dev-8.15\lib -lvips -lgobject-2.0 -lglib-2.0" >> $env:GITHUB_ENV
+          echo "PATH=C:\vips\vips-dev-8.15\bin;$env:PATH" >> $env:GITHUB_ENV
+          echo "PKG_CONFIG_PATH=C:\vips\vips-dev-8.15\lib\pkgconfig" >> $env:GITHUB_ENV
+        shell: pwsh
 
-      - name: Download dependencies (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Download dependencies
         run: go mod download
 
-      - name: Download dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: msys2 {0}
-        run: |
-          export PATH="/mingw64/bin:$PATH"
-          go mod download
-
-      - name: Run tests (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Run tests
         run: go test -v ./...
         env:
           CGO_ENABLED: 1
-
-      - name: Run tests (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: msys2 {0}
-        run: |
-          export PATH="/mingw64/bin:$PATH"
-          go test -v ./...
-        env:
-          CGO_ENABLED: 1
-          MSYSTEM: MINGW64
 
   lint:
     runs-on: ubuntu-latest
