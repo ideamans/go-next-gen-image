@@ -29,6 +29,13 @@ func (c *Converter) ToAVIF(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to auto-rotate: %w", NewFormatError(err))
 	}
 
+	// Remove metadata except ICC profile and orientation
+	// RemoveMetadata() keeps ICC profile, orientation, and page info by default
+	err = image.RemoveMetadata()
+	if err != nil {
+		return fmt.Errorf("failed to remove metadata: %w", err)
+	}
+
 	// Detect input format using magic bytes
 	imgType, err := DetectImageType(inputPath)
 	if err != nil {
@@ -53,7 +60,7 @@ func (c *Converter) ToAVIF(inputPath, outputPath string) error {
 		params = vips.NewAvifExportParams()
 		params.Quality = c.config.JPEGToAVIF.CQ
 		params.Lossless = false
-		params.StripMetadata = false // Keep ICC profile
+		params.StripMetadata = false // Already removed unwanted metadata, keep ICC
 
 		outputBuffer, _, err = image.ExportAvif(params)
 		if err != nil {
@@ -64,7 +71,7 @@ func (c *Converter) ToAVIF(inputPath, outputPath string) error {
 		// PNG to AVIF: lossless conversion
 		params = vips.NewAvifExportParams()
 		params.Lossless = true
-		params.StripMetadata = false // Keep ICC profile
+		params.StripMetadata = false // Already removed unwanted metadata, keep ICC
 
 		outputBuffer, _, err = image.ExportAvif(params)
 		if err != nil {

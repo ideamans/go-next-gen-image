@@ -100,12 +100,12 @@ converter := nextgenimage.NewConverter(config)
 - 損失圧縮
 - 品質設定可能（デフォルト: 80）
 - EXIFオリエンテーションに基づく自動回転
-- ICCプロファイルの保持
+- EXIFとXMPメタデータを削除し、ICCプロファイルのみ保持
 
 ### PNG to WebP
 - デフォルトで無損失圧縮
 - より良い圧縮のためのオプションのニアロスレスモード
-- ICCプロファイルの保持
+- EXIFとXMPメタデータを削除し、ICCプロファイルのみ保持
 - アルファチャンネルのサポート
 
 ### GIF to WebP
@@ -117,11 +117,11 @@ converter := nextgenimage.NewConverter(config)
 - CQ（一定品質）モードでの損失圧縮
 - CQ値の設定可能（デフォルト: 25、低いほど高品質）
 - EXIFオリエンテーションに基づく自動回転
-- ICCプロファイルの保持
+- EXIFとXMPメタデータを削除し、ICCプロファイルのみ保持
 
 ### PNG to AVIF
 - 無損失圧縮
-- ICCプロファイルの保持
+- EXIFとXMPメタデータを削除し、ICCプロファイルのみ保持
 - アルファチャンネルのサポート
 
 ### GIF to AVIF
