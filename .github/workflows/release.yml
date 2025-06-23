@@ -45,11 +45,13 @@ jobs:
             goarch: amd64
             artifact_name: nextgenimage-darwin-amd64
             build_flags: ""
-          - os: macos-latest
-            goos: darwin
-            goarch: arm64
-            artifact_name: nextgenimage-darwin-arm64
-            build_flags: ""
+          # Note: ARM64 macOS cross-compilation with CGO is complex
+          # Consider building on native ARM64 runners or removing this target
+          # - os: macos-latest
+          #   goos: darwin
+          #   goarch: arm64
+          #   artifact_name: nextgenimage-darwin-arm64
+          #   build_flags: ""
           - os: windows-latest
             goos: windows
             goarch: amd64
@@ -106,10 +108,22 @@ jobs:
           export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
           go mod download
 
-      - name: Build binary
-        if: matrix.os != 'windows-latest'
+      - name: Build binary (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+          go build \
+            -ldflags="-s -w -X main.version=${GITHUB_REF#refs/tags/}" \
+            -o ${{ matrix.artifact_name }} \
+            ./cmd/nextgenimage
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+
+      - name: Build binary (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          go build \
             -ldflags="-s -w -X main.version=${GITHUB_REF#refs/tags/}" \
             -o ${{ matrix.artifact_name }} \
             ./cmd/nextgenimage
@@ -182,31 +196,30 @@ jobs:
           body: |
             ## Installation
 
-            ### macOS
+            ### macOS (Intel)
             ```bash
-            # Intel Mac
             curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-darwin-amd64.tar.gz | tar xz
-            sudo mv nextgenimage /usr/local/bin/
-
-            # Apple Silicon
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-darwin-arm64.tar.gz | tar xz
             sudo mv nextgenimage /usr/local/bin/
             ```
 
-            ### Linux
+            ### Linux (x86_64)
             ```bash
             curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-linux-amd64.tar.gz | tar xz
             sudo mv nextgenimage /usr/local/bin/
             ```
 
-            ### Windows
+            ### Windows (x64)
             Download and extract `nextgenimage-windows-amd64.exe.zip`
 
             ## Requirements
             - libvips must be installed on your system
               - macOS: `brew install vips`
-              - Ubuntu/Debian: `sudo apt-get install libvips-dev`
-              - Windows: Use MSYS2 or vcpkg
+              - Ubuntu/Debian: `sudo apt-get install libvips-dev libavif-dev libheif-dev`
+              - Windows: Use MSYS2 with mingw-w64-x86_64-libvips
+
+            ## Notes
+            - Apple Silicon (M1/M2) users: Please build from source for native ARM64 support
+            - All binaries require libvips and its dependencies to be installed
 
             ## Usage
             See [README](https://github.com/${{ github.repository }}) for usage instructions.
