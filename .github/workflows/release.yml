@@ -1,0 +1,224 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Install libvips
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libaom-dev libaom3
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev libvips-tools
+
+      - name: Run tests
+        run: go test -v ./...
+        env:
+          CGO_ENABLED: 1
+
+  build:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            goos: linux
+            goarch: amd64
+            artifact_name: nextgenimage-linux-amd64
+            build_flags: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            artifact_name: nextgenimage-darwin-amd64
+            build_flags: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact_name: nextgenimage-darwin-arm64
+            build_flags: ""
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact_name: nextgenimage-windows-amd64.exe
+            build_flags: ""
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Install libvips (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libaom-dev libaom3
+          sudo apt-get install -y libheif-dev libvips-dev libavif-dev libvips-tools
+
+      - name: Install libvips (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install vips
+
+      - name: Setup MSYS2
+        if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-go
+            mingw-w64-x86_64-libvips
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-gettext
+            mingw-w64-x86_64-libavif
+            mingw-w64-x86_64-libwebp
+            mingw-w64-x86_64-libheif
+
+      - name: Download dependencies
+        if: matrix.os != 'windows-latest'
+        run: go mod download
+
+      - name: Download dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          go mod download
+
+      - name: Build binary
+        if: matrix.os != 'windows-latest'
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+            -ldflags="-s -w -X main.version=${GITHUB_REF#refs/tags/}" \
+            -o ${{ matrix.artifact_name }} \
+            ./cmd/nextgenimage
+        env:
+          CGO_ENABLED: 1
+
+      - name: Build binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          export PATH="/mingw64/bin:$PATH"
+          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          go build \
+            -ldflags="-s -w -X main.version=${GITHUB_REF#refs/tags/}" \
+            -o ${{ matrix.artifact_name }} \
+            ./cmd/nextgenimage
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+
+      # Create archive
+      - name: Create archive (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p dist
+          cp README.md LICENSE dist/
+          cp ${{ matrix.artifact_name }} dist/
+          cd dist
+          tar -czf ../${{ matrix.artifact_name }}.tar.gz *
+
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item README.md, LICENSE -Destination dist/
+          Copy-Item ${{ matrix.artifact_name }} -Destination dist/
+          Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact_name }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            ${{ matrix.artifact_name }}.tar.gz
+            ${{ matrix.artifact_name }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          body: |
+            ## Installation
+
+            ### macOS
+            ```bash
+            # Intel Mac
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-darwin-amd64.tar.gz | tar xz
+            sudo mv nextgenimage /usr/local/bin/
+
+            # Apple Silicon
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-darwin-arm64.tar.gz | tar xz
+            sudo mv nextgenimage /usr/local/bin/
+            ```
+
+            ### Linux
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-linux-amd64.tar.gz | tar xz
+            sudo mv nextgenimage /usr/local/bin/
+            ```
+
+            ### Windows
+            Download and extract `nextgenimage-windows-amd64.exe.zip`
+
+            ## Requirements
+            - libvips must be installed on your system
+              - macOS: `brew install vips`
+              - Ubuntu/Debian: `sudo apt-get install libvips-dev`
+              - Windows: Use MSYS2 or vcpkg
+
+            ## Usage
+            See [README](https://github.com/${{ github.repository }}) for usage instructions.
+
+      - name: Upload Release Assets
+        run: |
+          for file in artifacts/*/*.{tar.gz,zip}; do
+            if [ -f "$file" ]; then
+              asset_name=$(basename "$file")
+              echo "Uploading $asset_name"
+              gh release upload "${{ github.ref_name }}" "$file" --clobber
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
