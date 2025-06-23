@@ -77,6 +77,12 @@ func TestWebPCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Reset global flags
+			webpQuality = 80
+			webpTryNearLossless = false
+			verbose = false
+			quiet = false
+			
 			// Create fresh command instance
 			cmd := &cobra.Command{
 				Use:   "nextgenimage",
@@ -87,7 +93,23 @@ to next-generation formats (WebP, AVIF) following best practices.`,
 			}
 			cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 			cmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "Suppress all output except errors")
-			cmd.AddCommand(webpCmd)
+			
+			// Create a new webp command for this test
+			webpTestCmd := &cobra.Command{
+				Use:   "webp <input-file> <output-file>",
+				Short: "Convert image to WebP format",
+				Long: `Convert JPEG, PNG, or GIF images to WebP format.
+	
+JPEG images are converted using lossy compression with configurable quality.
+PNG images are converted using lossless compression, with optional near-lossless.
+GIF images are converted to animated WebP preserving animation properties.`,
+				Args: cobra.ExactArgs(2),
+				RunE: runWebP,
+			}
+			webpTestCmd.Flags().IntVarP(&webpQuality, "quality", "q", 80, "JPEG to WebP quality (1-100)")
+			webpTestCmd.Flags().BoolVar(&webpTryNearLossless, "try-near-lossless", false, "Try near-lossless compression for PNG to WebP")
+			
+			cmd.AddCommand(webpTestCmd)
 
 			output, err := executeCommand(cmd, tt.args...)
 			if tt.expectError {
@@ -141,6 +163,11 @@ func TestAVIFCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Reset global flags
+			avifCQ = 25
+			verbose = false
+			quiet = false
+			
 			// Create fresh command instance
 			cmd := &cobra.Command{
 				Use:   "nextgenimage",
@@ -151,7 +178,22 @@ to next-generation formats (WebP, AVIF) following best practices.`,
 			}
 			cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 			cmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "Suppress all output except errors")
-			cmd.AddCommand(avifCmd)
+			
+			// Create a new avif command for this test
+			avifTestCmd := &cobra.Command{
+				Use:   "avif <input-file> <output-file>",
+				Short: "Convert image to AVIF format",
+				Long: `Convert JPEG or PNG images to AVIF format.
+	
+JPEG images are converted using lossy compression with configurable CQ value.
+PNG images are converted using lossless compression.
+GIF to AVIF conversion is not supported.`,
+				Args: cobra.ExactArgs(2),
+				RunE: runAVIF,
+			}
+			avifTestCmd.Flags().IntVar(&avifCQ, "cq", 25, "JPEG to AVIF CQ value (1-63, lower is better quality)")
+			
+			cmd.AddCommand(avifTestCmd)
 
 			output, err := executeCommand(cmd, tt.args...)
 			if tt.expectError {
@@ -183,6 +225,12 @@ func TestWebPConversionIntegration(t *testing.T) {
 	tempDir := t.TempDir()
 	outputPath := filepath.Join(tempDir, "output.webp")
 
+	// Reset global flags
+	webpQuality = 80
+	webpTryNearLossless = false
+	verbose = false
+	quiet = false
+	
 	// Create fresh command instance
 	cmd := &cobra.Command{
 		Use:   "nextgenimage",
@@ -194,11 +242,25 @@ to next-generation formats (WebP, AVIF) following best practices.`,
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	cmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "Suppress all output except errors")
 	
-	// Reset flags for this test
-	quiet = true // Suppress output for cleaner test
-	cmd.AddCommand(webpCmd)
+	// Create a new webp command for this test
+	webpTestCmd := &cobra.Command{
+		Use:   "webp <input-file> <output-file>",
+		Short: "Convert image to WebP format",
+		Long: `Convert JPEG, PNG, or GIF images to WebP format.
+	
+JPEG images are converted using lossy compression with configurable quality.
+PNG images are converted using lossless compression, with optional near-lossless.
+GIF images are converted to animated WebP preserving animation properties.`,
+		Args: cobra.ExactArgs(2),
+		RunE: runWebP,
+	}
+	webpTestCmd.Flags().IntVarP(&webpQuality, "quality", "q", 80, "JPEG to WebP quality (1-100)")
+	webpTestCmd.Flags().BoolVar(&webpTryNearLossless, "try-near-lossless", false, "Try near-lossless compression for PNG to WebP")
+	
+	cmd.AddCommand(webpTestCmd)
 
-	output, err := executeCommand(cmd, "webp", testJPEG, outputPath)
+	// Add --quiet flag to suppress output
+	output, err := executeCommand(cmd, "--quiet", "webp", testJPEG, outputPath)
 
 	// Allow FormatError (output size not smaller)
 	if err != nil {
@@ -215,9 +277,9 @@ to next-generation formats (WebP, AVIF) following best practices.`,
 		t.Errorf("Output file was not created: %v", err)
 	}
 
-	// If no error, output should contain success indicator
-	if !quiet && !strings.Contains(output, "✓") {
-		t.Errorf("Expected success indicator in output: %s", output)
+	// When using --quiet flag, there should be no output
+	if output != "" {
+		t.Errorf("Expected no output in quiet mode, got: %s", output)
 	}
 }
 
@@ -232,6 +294,11 @@ func TestAVIFConversionIntegration(t *testing.T) {
 	tempDir := t.TempDir()
 	outputPath := filepath.Join(tempDir, "output.avif")
 
+	// Reset global flags
+	avifCQ = 25
+	verbose = false
+	quiet = false
+	
 	// Create fresh command instance
 	cmd := &cobra.Command{
 		Use:   "nextgenimage",
@@ -243,11 +310,24 @@ to next-generation formats (WebP, AVIF) following best practices.`,
 	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	cmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "Suppress all output except errors")
 	
-	// Reset flags for this test
-	quiet = true // Suppress output for cleaner test
-	cmd.AddCommand(avifCmd)
+	// Create a new avif command for this test
+	avifTestCmd := &cobra.Command{
+		Use:   "avif <input-file> <output-file>",
+		Short: "Convert image to AVIF format",
+		Long: `Convert JPEG or PNG images to AVIF format.
+	
+JPEG images are converted using lossy compression with configurable CQ value.
+PNG images are converted using lossless compression.
+GIF to AVIF conversion is not supported.`,
+		Args: cobra.ExactArgs(2),
+		RunE: runAVIF,
+	}
+	avifTestCmd.Flags().IntVar(&avifCQ, "cq", 25, "JPEG to AVIF CQ value (1-63, lower is better quality)")
+	
+	cmd.AddCommand(avifTestCmd)
 
-	output, err := executeCommand(cmd, "avif", testJPEG, outputPath)
+	// Add --quiet flag to suppress output
+	output, err := executeCommand(cmd, "--quiet", "avif", testJPEG, outputPath)
 
 	// Allow FormatError (output size not smaller)
 	if err != nil {
@@ -264,8 +344,8 @@ to next-generation formats (WebP, AVIF) following best practices.`,
 		t.Errorf("Output file was not created: %v", err)
 	}
 
-	// If no error, output should contain success indicator
-	if !quiet && !strings.Contains(output, "✓") {
-		t.Errorf("Expected success indicator in output: %s", output)
+	// When using --quiet flag, there should be no output
+	if output != "" {
+		t.Errorf("Expected no output in quiet mode, got: %s", output)
 	}
 }
