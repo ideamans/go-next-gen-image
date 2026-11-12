@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     strategy:
+      # Let one OS fail without cancelling the others (Windows' MSYS2 setup
+      # can break on its own when a package disappears upstream).
+      fail-fast: false
       matrix:
         go-version: ["1.22", "1.23"]
         os: [ubuntu-22.04, macos-26, windows-latest]
