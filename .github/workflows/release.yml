@@ -40,18 +40,13 @@ jobs:
             goarch: amd64
             artifact_name: nextgenimage-linux-amd64
             build_flags: ""
-          - os: macos-latest
+          # Apple Silicon only. Intel Macs (darwin/amd64) are no longer
+          # supported (2026-11-12). The build is native, not cross-compiled.
+          - os: macos-26
             goos: darwin
-            goarch: amd64
-            artifact_name: nextgenimage-darwin-amd64
+            goarch: arm64
+            artifact_name: nextgenimage-darwin-arm64
             build_flags: ""
-          # Note: ARM64 macOS cross-compilation with CGO is complex
-          # Consider building on native ARM64 runners or removing this target
-          # - os: macos-latest
-          #   goos: darwin
-          #   goarch: arm64
-          #   artifact_name: nextgenimage-darwin-arm64
-          #   build_flags: ""
           - os: windows-latest
             goos: windows
             goarch: amd64
@@ -76,7 +71,7 @@ jobs:
           sudo apt-get install -y libheif-dev libvips-dev libavif-dev libvips-tools
 
       - name: Install libvips (macOS)
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         run: |
           brew install vips
 
@@ -121,7 +116,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
 
       - name: Build binary (macOS)
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         run: |
           go build \
             -ldflags="-s -w -X main.version=${GITHUB_REF#refs/tags/}" \
@@ -196,9 +191,9 @@ jobs:
           body: |
             ## Installation
 
-            ### macOS (Intel)
+            ### macOS (Apple Silicon)
             ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-darwin-amd64.tar.gz | tar xz
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/nextgenimage-darwin-arm64.tar.gz | tar xz
             sudo mv nextgenimage /usr/local/bin/
             ```
 
@@ -218,7 +213,7 @@ jobs:
               - Windows: Use MSYS2 with mingw-w64-x86_64-libvips
 
             ## Notes
-            - Apple Silicon (M1/M2) users: Please build from source for native ARM64 support
+            - Intel Macs are no longer supported
             - All binaries require libvips and its dependencies to be installed
 
             ## Usage
