@@ -9,9 +9,12 @@ on:
 jobs:
   test:
     strategy:
+      # Let one OS fail without cancelling the others (Windows' MSYS2 setup
+      # can break on its own when a package disappears upstream).
+      fail-fast: false
       matrix:
         go-version: ["1.22", "1.23"]
-        os: [ubuntu-22.04, macos-latest, windows-latest]
+        os: [ubuntu-22.04, macos-26, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -35,25 +38,27 @@ jobs:
           vips --vips-config
 
       - name: Install libvips (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-26'
         run: |
           brew install vips
+          # vips.pc requires libarchive, which Homebrew installs keg-only
+          echo "PKG_CONFIG_PATH=$(brew --prefix libarchive)/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
 
       - name: Setup MSYS2
         if: matrix.os == 'windows-latest'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           update: true
           install: >-
-            mingw-w64-x86_64-go
-            mingw-w64-x86_64-libvips
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-gettext
-            mingw-w64-x86_64-libavif
-            mingw-w64-x86_64-libwebp
-            mingw-w64-x86_64-libheif
+            mingw-w64-ucrt-x86_64-go
+            mingw-w64-ucrt-x86_64-libvips
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkg-config
+            mingw-w64-ucrt-x86_64-gettext
+            mingw-w64-ucrt-x86_64-libavif
+            mingw-w64-ucrt-x86_64-libwebp
+            mingw-w64-ucrt-x86_64-libheif
 
       - name: Download dependencies (non-Windows)
         if: matrix.os != 'windows-latest'
@@ -63,8 +68,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          export PATH="/mingw64/bin:$PATH"
-          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          export PATH="/ucrt64/bin:$PATH"
+          export PKG_CONFIG_PATH="/ucrt64/lib/pkgconfig"
           go mod download
 
       - name: Run tests (non-Windows)
@@ -77,8 +82,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          export PATH="/mingw64/bin:$PATH"
-          export PKG_CONFIG_PATH="/mingw64/lib/pkgconfig"
+          export PATH="/ucrt64/bin:$PATH"
+          export PKG_CONFIG_PATH="/ucrt64/lib/pkgconfig"
           go test -v ./...
         env:
           CGO_ENABLED: 1

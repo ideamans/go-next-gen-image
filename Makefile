@@ -47,10 +47,9 @@ build-linux:
 	@GOOS=linux GOARCH=amd64 $(GO) build $(BUILD_FLAGS_VERSION) -o $(BINARY_NAME)-linux-amd64 $(CMD_PATH)
 
 .PHONY: build-darwin
-build-darwin:
-	@echo "Building for macOS (amd64)..."
-	@GOOS=darwin GOARCH=amd64 $(GO) build $(BUILD_FLAGS_VERSION) -o $(BINARY_NAME)-darwin-amd64 $(CMD_PATH)
+build-darwin: build-darwin-arm64
 
+# Apple Silicon only. Intel Macs (darwin/amd64) are no longer supported.
 .PHONY: build-darwin-arm64
 build-darwin-arm64:
 	@echo "Building for macOS (arm64)..."
